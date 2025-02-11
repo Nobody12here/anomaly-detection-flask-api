@@ -25,6 +25,7 @@ def create_app():
     @app.route("/predict", methods=["POST"])
     def predict_anomaly():
         try:
+            print(AGENT_ENDPOINT, AGENT_KEY)
             # Parse JSON input
             data = request.get_json()
             cpu_usage = data.get("cpu_usage")
