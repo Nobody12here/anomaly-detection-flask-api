@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
 import joblib
 import numpy as np
+from flask_cors import CORS
+
 
 def create_app():
     # Initialize Flask app
@@ -40,6 +42,6 @@ def create_app():
 
 # Create the Gunicorn-compatible application instance
 app = create_app()
-
+CORS(app)
 if __name__ == "__main__":
     app.run(debug=True)
