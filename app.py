@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from openai import OpenAI
 import os
+import json
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -25,7 +26,6 @@ def create_app():
     @app.route("/predict", methods=["POST"])
     def predict_anomaly():
         try:
-            print(AGENT_ENDPOINT, AGENT_KEY)
             # Parse JSON input
             data = request.get_json()
             cpu_usage = data.get("cpu_usage")
@@ -42,12 +42,9 @@ def create_app():
 
             # Extract and return response
             prediction_response = response.choices[0].message.content
-            return jsonify({
-                "cpu_usage": cpu_usage,
-                "cpu_temp": cpu_temp,
-                "prediction": prediction_response
-            })
-
+            
+            #Convert the json string to valid json
+            return prediction_response
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
