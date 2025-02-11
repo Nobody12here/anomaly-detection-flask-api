@@ -1,16 +1,26 @@
 from flask import Flask, request, jsonify
-import joblib
-import numpy as np
 from flask_cors import CORS
+from openai import OpenAI
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Get API details from environment variables
+AGENT_ENDPOINT = os.getenv("AGENT_ENDPOINT")
+AGENT_KEY = os.getenv("AGENT_KEY")
 
 
 def create_app():
-    # Initialize Flask app
     app = Flask(__name__)
+    CORS(app)
 
-    # Load the saved model and scaler
-    model = joblib.load("./models/isolation_forest_model.pkl")
-    scaler = joblib.load("./models/scaler.pkl")
+    # OpenAI client setup
+    client = OpenAI(
+        base_url=AGENT_ENDPOINT,
+        api_key=AGENT_KEY,
+    )
 
     @app.route("/predict", methods=["POST"])
     def predict_anomaly():
@@ -20,28 +30,30 @@ def create_app():
             cpu_usage = data.get("cpu_usage")
             cpu_temp = data.get("cpu_temp")
 
-            # Validate inputs
             if cpu_usage is None or cpu_temp is None:
                 return jsonify({"error": "Invalid input. Provide 'cpu_usage' and 'cpu_temp'."}), 400
 
-            # Prepare input for the model
-            input_data = np.array([[cpu_usage, cpu_temp]])
-            normalized_data = scaler.transform(input_data)
+            # Send data to OpenAI agent
+            response = client.chat.completions.create(
+                model="n/a",
+                messages=[{"role": "user", "content": f'{{"cpu_usage": {cpu_usage}, "cpu_temp": {cpu_temp}}}'}],
+            )
 
-            # Make prediction
-            prediction = model.predict(normalized_data)
-
-            # Return result
-            result = "Anomaly" if prediction[0] == -1 else "Normal"
-            return jsonify({"cpu_usage": cpu_usage, "cpu_temp": cpu_temp, "prediction": result})
+            # Extract and return response
+            prediction_response = response.choices[0].message.content
+            return jsonify({
+                "cpu_usage": cpu_usage,
+                "cpu_temp": cpu_temp,
+                "prediction": prediction_response
+            })
 
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
     return app
 
-# Create the Gunicorn-compatible application instance
+
 app = create_app()
-CORS(app)
+
 if __name__ == "__main__":
     app.run(debug=True)
